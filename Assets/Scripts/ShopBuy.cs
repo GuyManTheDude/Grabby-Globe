@@ -6,7 +6,7 @@ using Google.Play.Review;
 
 public class ShopBuy : MonoBehaviour
 {
-    private Color tempMoney;
+    public Color tempMoney;
     public int price = 0;
     public int packIndex = 0;
     public GameManager gm;

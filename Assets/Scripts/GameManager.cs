@@ -8,7 +8,8 @@ using GooglePlayGames;
 
 public class GameManager : MonoBehaviour
 {
-
+    public GameObject warningRing;
+    private bool isRestarting = false;
     public bool isConnectedGooglePlayServices = false;
     private bool watchedAd = false;
     public RewardedAdsButton myRW;
@@ -24,6 +25,7 @@ public class GameManager : MonoBehaviour
     public Text FinishScore;
     public Text FinishHighscore;
     public SoundManager mySM;
+
 
     private List<Mesh> parts;
     public float objectSpeed = 10f;
@@ -81,7 +83,7 @@ public class GameManager : MonoBehaviour
         PlayGamesPlatform.Activate();
 
         QualitySettings.vSyncCount = 0;
-        Application.targetFrameRate = 60;
+        Application.targetFrameRate = Screen.currentResolution.refreshRate;
 
         mySave = SaveSystem.loadGame();
         if (mySave == null)
@@ -132,6 +134,7 @@ public class GameManager : MonoBehaviour
         Time.timeScale = 0;
     }
 
+
     public void SignIntoGooglePlayServices()
     {
         PlayGamesPlatform.Instance.Authenticate(SignInInteractivity.CanPromptOnce, (result) =>
@@ -179,6 +182,14 @@ public class GameManager : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
+        if(Input.GetKey(KeyCode.Escape))
+        {
+            if(!isRestarting)
+            {
+                RestartScene();
+                isRestarting = true;
+            }
+        }
         if(!GameOver && !waiting)
         {
             Invoke("SpawnObject", waitTime);
@@ -212,11 +223,14 @@ public class GameManager : MonoBehaviour
         highscoreText.text = highScore.ToString();
         UpdateScore();
 
+        //Increases size every time the score meets a divison of the scoreThresh
         if (scoreCounter >= scoreThresh && !pause)
         {
+            //play expanding sound
                 mySM.ExpandSound();
 
-            Scale(1f, ScaleFact);
+            //scale up the game scene parent
+            Scale(0.8f, ScaleFact);
            
             Debug.Log("Biogger");
             waitTime = Mathf.Clamp(waitTime - .125f, 0.4f, 3f);
@@ -226,9 +240,10 @@ public class GameManager : MonoBehaviour
             ScaleFact += new Vector3(0.125f, 0.125f, 0.125f);
 
             //particle system
-
             doParticles();
 
+            warningRing.SetActive(false);
+            mySM.musicSource.pitch = 1.0f;
 
             //Give a break after each resize
             maxSpawn = 0;
@@ -241,7 +256,7 @@ public class GameManager : MonoBehaviour
     {           
 
             myParts.GetComponent<ParticleSystemRenderer>().mesh = selectedPack.Objects[0].GetComponent<MeshFilter>().sharedMesh;
-            myParts.startSize = selectedPack.Objects[0].transform.localScale.x * 2;
+            myParts.startSize = selectedPack.Objects[0].transform.localScale.x * 2; // This is fine
             myParts.Play();
     }
 
@@ -280,6 +295,7 @@ public class GameManager : MonoBehaviour
             CurrentMoney.text += " + $5";
             AddMoney(4);
 
+            //Google services achievement checks. Ewwww
             if(this.isConnectedGooglePlayServices)
             {
                 Social.ReportScore(Money, GPGSIds.leaderboard_money, (success) =>
@@ -349,13 +365,14 @@ public class GameManager : MonoBehaviour
         }
 
         CurrentMoney.text += " = $" + Money.ToString();
-        //
+        //Show the end screen and save
         RetryPanel.SetActive(true);
         switchPackButton.SetActive(true);        
         this.SaveGame();
         pause = true;
     }
 
+    //hehe
     public void SecretButton()
     {
         if(mySM.scoreVolume == 0)
@@ -364,24 +381,15 @@ public class GameManager : MonoBehaviour
         }
     }
 
+    //it works, don't think about it
     void AddMoney(int profit)
     {
         Money += profit + 1;
         moneyText.text = "$" + Money;
     }
 
-    public void SwitchPack(int packID)
-    {
-        selectedPack = Packs[packID];
-        lastPack = packID;
-        Objects.Clear();
-        foreach(GameObject obj in selectedPack.Objects)
-        {
-            Objects.Add(obj);
-        }
-        this.SaveGame();
-    }
 
+    //Loads objects from selected packs
     public void SwitchPack()
     {
         Objects.Clear();
@@ -392,6 +400,20 @@ public class GameManager : MonoBehaviour
         this.SaveGame();
     }
 
+    //Sets a specified selected pack and then loads the objects
+    public void SwitchPack(int packID)
+    {
+        selectedPack = Packs[packID];
+        lastPack = packID;
+        Objects.Clear();
+        foreach (GameObject obj in selectedPack.Objects)
+        {
+            Objects.Add(obj);
+        }
+        this.SaveGame();
+    }
+
+    //Does what it says
     void UpdateScore()
     {
         Score = orbPlayer.itemsCaught;
@@ -450,18 +472,22 @@ public class GameManager : MonoBehaviour
             matOB.EnableKeyword("_Color");
             matBG.EnableKeyword("_Color");
             myParts.GetComponent<ParticleSystemRenderer>().material.SetColor(Shader.PropertyToID("_Color"), newOBCol);
+            yield return StartCoroutine("Growage");
+            startingScale = objectToScale.transform.localScale;
             while (elapsedTime < seconds)
             {
                 if (mySM.musicFilter.cutoffFrequency <= 8000)
                 {
-                    mySM.musicFilter.cutoffFrequency = Mathf.Lerp(mySM.musicFilter.cutoffFrequency, 8000, Time.deltaTime * 2.2f);
+                    mySM.musicFilter.cutoffFrequency = Mathf.Lerp(mySM.musicFilter.cutoffFrequency, 8000, Time.deltaTime * 2.8f);
                 }
-                matOB.SetColor(Shader.PropertyToID("_Color"), Color.Lerp(matOB.color, newOBCol, Time.deltaTime * 2.2f));
-                matBG.SetColor(Shader.PropertyToID("_Color"), Color.Lerp(matBG.color, newBGCol, Time.deltaTime * 2.2f));
-                objectToScale.transform.localScale = Vector3.Lerp(startingScale, scaleTo, (elapsedTime / seconds));
+                matOB.SetColor(Shader.PropertyToID("_Color"), Color.Lerp(matOB.color, newOBCol, Time.deltaTime * 2.8f));
+                matBG.SetColor(Shader.PropertyToID("_Color"), Color.Lerp(matBG.color, newBGCol, Time.deltaTime * 2.8f));
+                objectToScale.transform.localScale = Vector3.Lerp(startingScale, scaleTo + scaleTo / 20, (elapsedTime / seconds));
                 elapsedTime += Time.deltaTime;
                 yield return new WaitForEndOfFrame();
             }
+            yield return new WaitForSeconds(0.05f);
+            yield return StartCoroutine("Shrinkage");
             objectToScale.transform.localScale = scaleTo;
             matBG.SetColor(Shader.PropertyToID("_Color"), newBGCol);
             matOB.SetColor(Shader.PropertyToID("_Color"), newOBCol);            
@@ -474,21 +500,35 @@ public class GameManager : MonoBehaviour
         
     }
 
-    //public IEnumerator ColorShift(GameObject objectToShift,  float seconds, float colorRange)
-    //{
-    //    float elapsedTime = 0;
-    //    Material mat = objectToShift.GetComponent<MeshRenderer>().material;
-        
-    //    while (elapsedTime < seconds)
-    //    {
-           
-    //        elapsedTime += Time.deltaTime;
-    //        yield return new WaitForEndOfFrame();
-    //    }
-    //    mat.SetColor(Shader.PropertyToID("_Color"), newCol);
-    //    Debug.Log("Finish");
-    //    StopCoroutine("ColorShift");
-    //}
+
+
+    public IEnumerator Shrinkage()
+    {
+        float elapsedTime = 0;
+        Vector3 startingScale = SceneController.transform.localScale - ScaleFact / 20;
+        while (elapsedTime < 0.1f)
+        {
+            SceneController.transform.localScale = Vector3.Lerp(SceneController.transform.localScale, startingScale, (elapsedTime / 0.1f));
+            elapsedTime += Time.deltaTime;
+            yield return new WaitForEndOfFrame();
+        }
+        SceneController.transform.localScale = startingScale;
+        StopCoroutine("Shrinkage");
+    }
+
+    public IEnumerator Growage()
+    {
+        float elapsedTime = 0;
+        Vector3 startingScale = SceneController.transform.localScale;
+        while (elapsedTime < 0.1f)
+        {
+            SceneController.transform.localScale = Vector3.Lerp(startingScale, startingScale - startingScale / 10, (elapsedTime / 0.1f));
+            elapsedTime += Time.deltaTime;
+            yield return new WaitForEndOfFrame();
+        }
+        SceneController.transform.localScale = startingScale - startingScale / 10;
+        StopCoroutine("Growage");
+    }
 
     public void OpenShop()
     {
@@ -572,5 +612,19 @@ public class GameManager : MonoBehaviour
     {
         SaveSystem.SaveGame(gameObject.GetComponent<GameManager>());
         Debug.Log("Saved Game");
+    }
+
+    public void Pay2Play()
+    {
+        if(Money > 50)
+        {
+            Money -= 50;
+            moneyText.text = "$" + Money;
+            adFinished();
+        }
+        else
+        {
+            mySM.DenySound();
+        }
     }
 }

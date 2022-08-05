@@ -113,6 +113,21 @@ public class Rotator : MonoBehaviour
                         gm.GameOver = true;
                         Debug.Log("Game Over");
                     }
+                    else 
+                    {
+                        Vector3 VerticalOOBPoint = new Vector3(0,gm.OOBPoint.position.x,0);
+                        if (
+                            Vector3.Distance(collision.gameObject.transform.position, gm.OOBPoint.position) < 1 * gm.SceneController.transform.localScale.x ||
+                            Vector3.Distance(collision.gameObject.transform.position, -gm.OOBPoint.position) < 1 * gm.SceneController.transform.localScale.x ||
+                            Vector3.Distance(collision.gameObject.transform.position, VerticalOOBPoint) < 1 * gm.SceneController.transform.localScale.x ||
+                            Vector3.Distance(collision.gameObject.transform.position, -VerticalOOBPoint) < 1 * gm.SceneController.transform.localScale.x
+                            ) // this is gross and dumb but it works
+                        {
+                            gm.warningRing.SetActive(true);
+                            gm.mySM.musicSource.pitch = 1.1f;
+                        }
+
+                    }
                 }
                 else if (collision.gameObject.GetComponentInChildren<Grabity>())
                 {

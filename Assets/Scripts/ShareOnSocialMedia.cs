@@ -45,7 +45,7 @@ public class ShareOnSocialMedia : MonoBehaviour
 		new NativeShare ()
 			.AddFile (path)
 			.SetSubject ("New Highscore!")
-			.SetText ("I just scored " + myGM.Score + " in Grabby Globe! Download it on the Google play store to beat my score!")
+			.SetText ("I just scored " + myGM.Score + " in Grabby Globe! Get it here! https://bit.ly/3hqSLQb")
 			.Share ();
 
 
